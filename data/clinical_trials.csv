@@ -1,0 +1,6 @@
+nct_id,molecule,indication,phase,status,sponsor,country,start_year,estimated_completion_year
+NCT00000001,Tiotropium,COPD,Phase 3,Active,BigPharma A,India,2022,2026
+NCT00000002,Tiotropium,Asthma,Phase 2,Recruiting,Academic B,India,2023,2027
+NCT00000003,Tiotropium,COPD,Phase 4,Completed,BigPharma C,US,2019,2023
+NCT00000004,Tiotropium,Bronchiectasis,Phase 2,Active,Biotech D,US,2021,2025
+

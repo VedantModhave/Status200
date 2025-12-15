@@ -1,0 +1,6 @@
+molecule,country,year,import_volume_kg,export_volume_kg,unit_price_usd,top_source_countries
+Tiotropium,India,2021,500,50,120,China|Germany
+Tiotropium,India,2024,620,70,115,China|Germany
+Tiotropium,US,2021,80,400,135,India|Italy
+Tiotropium,US,2024,60,450,130,India|Spain
+

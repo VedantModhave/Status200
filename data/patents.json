@@ -1,0 +1,37 @@
+[
+  {
+    "molecule": "Tiotropium",
+    "patent_no": "US1234567A",
+    "assignee": "BigPharma A",
+    "patent_type": "composition",
+    "indication": "COPD",
+    "filing_year": 2005,
+    "expiry_year": 2025,
+    "status": "granted",
+    "fto_risk": "high"
+  },
+  {
+    "molecule": "Tiotropium",
+    "patent_no": "US2345678B",
+    "assignee": "BigPharma B",
+    "patent_type": "device + formulation",
+    "indication": "Asthma",
+    "filing_year": 2012,
+    "expiry_year": 2032,
+    "status": "granted",
+    "fto_risk": "medium"
+  },
+  {
+    "molecule": "Tiotropium",
+    "patent_no": "IN3456789C",
+    "assignee": "Generics Co",
+    "patent_type": "process",
+    "indication": "COPD",
+    "filing_year": 2018,
+    "expiry_year": 2038,
+    "status": "pending",
+    "fto_risk": "low"
+  }
+]
+
+
