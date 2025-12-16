@@ -3,27 +3,122 @@ from typing import Dict, Any, List, Optional
 from .state import ConversationState, AgentResult
 
 
+def needs_clarification(state: ConversationState) -> Optional[str]:
+    """
+    Check if query needs clarification and return clarification question.
+    Returns None if no clarification needed.
+    """
+    query_lower = state.user_query.lower()
+    
+    # Check for vague queries that need clarification
+    vague_patterns = [
+        ("where is the unmet need", ["region", "therapy area", "indication"]),
+        ("which", ["region", "molecule", "therapy area"]),
+        ("show me", ["market", "trials", "patents", "all"]),
+    ]
+    
+    for pattern, options in vague_patterns:
+        if pattern in query_lower:
+            # Check if query already specifies what they want
+            if "region" in query_lower or "geography" in query_lower:
+                continue
+            if "therapy" in query_lower or "indication" in query_lower:
+                continue
+            if "molecule" in query_lower or state.molecule.lower() in query_lower:
+                continue
+            
+            # Return clarification question
+            return f"Would you like the analysis by **region**, **therapy area**, or **both**?"
+    
+    # Check for follow-up queries that need additional agents
+    follow_up_keywords = {
+        "also": ["additional", "more"],
+        "check": ["verify", "validate"],
+        "add": ["include", "incorporate"],
+    }
+    
+    for keyword, synonyms in follow_up_keywords.items():
+        if keyword in query_lower:
+            # Check if they want to add biosimilar analysis
+            if "biosimilar" in query_lower or "competition" in query_lower:
+                return None  # Will be handled by adding patent agent
+            if "market" in query_lower and "iqvia" not in [t.get("agent") for t in state.tasks]:
+                return None  # Will add IQVIA agent
+    
+    return None
+
+
 def plan_tasks(state: ConversationState) -> ConversationState:
     """
-    Simple, rule-based planner for now.
-    Later this will be LLM-driven within LangGraph.
+    Query-aware task planner that selects relevant agents based on query intent.
+    Handles follow-up queries and adds additional agents as needed.
     """
-    base_tasks: List[Dict[str, Any]] = [
-        {"agent": "iqvia", "task_type": "market_insights"},
-        {"agent": "exim", "task_type": "trade_trends"},
-        {"agent": "patent", "task_type": "patent_landscape"},
-        {"agent": "clinical_trials", "task_type": "trial_pipeline"},
-        {"agent": "internal", "task_type": "internal_insights"},
-        {"agent": "web", "task_type": "web_intel"},
-    ]
-    state.tasks = base_tasks
+    query_lower = state.user_query.lower()
+    
+    # Handle follow-up queries (e.g., "Also check for biosimilar competition")
+    is_followup = any(word in query_lower for word in ["also", "add", "check", "include", "additionally"])
+    
+    # If follow-up, add to existing tasks instead of replacing
+    existing_agents = [t.get("agent") for t in state.tasks] if state.tasks else []
+    
+    # Define agent keywords for intelligent routing
+    agent_keywords = {
+        "iqvia": ["market", "sales", "growth", "cagr", "competition", "competitor", "revenue", "size", "trend"],
+        "exim": ["import", "export", "trade", "exim", "supply", "sourcing", "api", "formulation", "volume"],
+        "patent": ["patent", "ip", "intellectual property", "expiry", "fto", "freedom to operate", "filing", "biosimilar"],
+        "clinical_trials": ["trial", "clinical", "pipeline", "phase", "study", "sponsor", "recruiting", "nct"],
+        "internal": ["internal", "strategy", "field", "mins", "deck", "insight"],
+        "web": ["guideline", "publication", "literature", "rwe", "real world", "evidence", "journal", "news"],
+    }
+    
+    # Determine which agents to run based on query
+    selected_agents = existing_agents.copy() if is_followup else []
+    
+    # If query is very generic (like "find opportunities"), run all agents
+    generic_queries = ["opportunity", "innovation", "find", "identify", "explore", "analyze", "summary", "complete", "all", "everything"]
+    is_generic = any(gq in query_lower for gq in generic_queries) and len(query_lower.split()) < 15
+    
+    if is_generic and not is_followup:
+        # Run all agents for comprehensive analysis
+        selected_agents = ["iqvia", "exim", "patent", "clinical_trials", "internal", "web"]
+    else:
+        # Select agents based on keywords
+        for agent_name, keywords in agent_keywords.items():
+            if any(kw in query_lower for kw in keywords):
+                if agent_name not in selected_agents:
+                    selected_agents.append(agent_name)
+        
+        # If no specific matches and not a follow-up, default to core agents
+        if not selected_agents and not is_followup:
+            selected_agents = ["iqvia", "exim", "patent", "clinical_trials", "web"]
+    
+    # Build task list
+    tasks = []
+    for agent in selected_agents:
+        task_type_map = {
+            "iqvia": "market_insights",
+            "exim": "trade_trends",
+            "patent": "patent_landscape",
+            "clinical_trials": "trial_pipeline",
+            "internal": "internal_insights",
+            "web": "web_intel",
+        }
+        tasks.append({"agent": agent, "task_type": task_type_map.get(agent, "general")})
+    
+    state.tasks = tasks
     return state
 
 
 def synthesize_results(state: ConversationState) -> ConversationState:
     """
     Simple rule-based synthesis to highlight whitespace and opportunities.
+    Handles clarification questions if needed.
     """
+    # If clarification is needed, return the question instead of synthesis
+    if state.clarification_needed:
+        state.final_summary = f"**Clarification Needed**\n\n{state.clarification_needed}\n\nPlease refine your query and I'll provide a more targeted analysis."
+        return state
+    
     parts: List[str] = []
     parts.append(
         f"Synthesizing findings for **{state.molecule}** in **{state.region}** "

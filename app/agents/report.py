@@ -1,9 +1,14 @@
+import base64
+from io import BytesIO
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.units import inch
+from reportlab.platypus import Image, PageBreak, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
 
 from .state import ConversationState, AgentResult
 
@@ -74,6 +79,42 @@ def _append_agent_section(story: list, result: AgentResult, styles) -> None:
     # Clean markdown in agent summaries as well
     clean_summary = _clean_markdown(result.summary)
     story.append(Paragraph(clean_summary, styles["Normal"]))
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 6))
+    
+    # Add charts
+    if result.charts:
+        for chart in result.charts:
+            try:
+                chart_data = base64.b64decode(chart.get('data', ''))
+                img = Image(BytesIO(chart_data), width=6*inch, height=3.75*inch)
+                story.append(img)
+                story.append(Spacer(1, 6))
+            except Exception:
+                pass  # Skip if chart can't be loaded
+    
+    # Add tables
+    if result.tables:
+        for table_data in result.tables:
+            rows = table_data.get('rows', [])
+            if rows:
+                df = pd.DataFrame(rows)
+                # Convert DataFrame to list of lists for ReportLab
+                table_rows = [df.columns.tolist()] + df.values.tolist()
+                tbl = Table(table_rows)
+                tbl.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ]))
+                story.append(tbl)
+                story.append(Spacer(1, 12))
+    
+    story.append(Spacer(1, 6))
 
 

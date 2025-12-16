@@ -1,6 +1,54 @@
+import base64
+from io import BytesIO
+
+import pandas as pd
 import streamlit as st
 
+import re
+
 from graph import run_demo_workflow
+
+
+def extract_entities_from_query(query: str, default_molecule: str, default_region: str) -> tuple[str, str]:
+    """
+    Extract molecule and region from user query if mentioned.
+    Returns (molecule, region) tuple.
+    """
+    query_lower = query.lower()
+    
+    # Common molecule names (add more as needed)
+    common_molecules = [
+        "aspirin", "tiotropium", "metformin", "atorvastatin", "lisinopril",
+        "amlodipine", "metoprolol", "omeprazole", "simvastatin", "losartan",
+        "albuterol", "levothyroxine", "azithromycin", "amoxicillin", "gabapentin"
+    ]
+    
+    # Common regions
+    regions = ["india", "us", "usa", "united states", "china", "brazil", "eu", "europe", "global", "uk"]
+    
+    # Extract molecule
+    molecule = default_molecule
+    for mol in common_molecules:
+        if mol in query_lower:
+            molecule = mol.capitalize()
+            break
+    
+    # Extract region
+    region = default_region
+    for reg in regions:
+        if reg in query_lower:
+            # Map variations to standard names
+            if reg in ["us", "usa", "united states"]:
+                region = "US"
+            elif reg in ["eu", "europe"]:
+                region = "EU"
+            elif reg == "uk":
+                region = "Global"  # or handle UK separately
+            else:
+                region = reg.capitalize()
+            break
+    
+    return molecule, region
 
 
 def main():
@@ -9,8 +57,9 @@ def main():
 
     st.markdown(
         """
-        This is a skeleton UI wired for a future LangGraph-based multi-agent backend.
-        For now, it simulates the conversation flow and agent activity.
+        **Agentic AI for Pharma Portfolio Innovation**  
+        This system orchestrates multiple specialized agents to identify innovation opportunities 
+        by analyzing market data, clinical trials, patents, trade flows, and scientific literature.
         """
     )
 
@@ -21,6 +70,8 @@ def main():
         st.session_state.last_report_path = None
     if "last_agent_results" not in st.session_state:
         st.session_state.last_agent_results = {}
+    if "last_agent_full_results" not in st.session_state:
+        st.session_state.last_agent_full_results = {}
 
     # Sidebar for configuration / molecule selection
     with st.sidebar:
@@ -31,6 +82,17 @@ def main():
             "Time Horizon", ["3 years", "5 years", "10 years"], index=1
         )
 
+        st.markdown("### File Upload")
+        uploaded_file = st.file_uploader(
+            "Upload Internal Document (PDF)", 
+            type=["pdf"],
+            help="Upload strategy decks, MINS, or field reports for analysis"
+        )
+        if uploaded_file:
+            st.success(f"Uploaded: {uploaded_file.name}")
+            # Store in session state for internal agent to use
+            st.session_state.uploaded_doc = uploaded_file.read()
+        
         st.markdown("### Demo Info")
         st.write("Team: EY Techathon 6.0 – Pharma Domain")
 
@@ -52,18 +114,36 @@ def main():
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # Call the (temporary) demo workflow instead of a real LangGraph graph
-            state = run_demo_workflow(
-                user_query=prompt,
-                molecule=molecule,
-                region=region,
-                time_horizon=time_horizon,
+            # Extract molecule and region from query if mentioned, otherwise use sidebar defaults
+            extracted_molecule, extracted_region = extract_entities_from_query(
+                prompt, molecule, region
             )
+            
+            # Update sidebar values if extracted (for next query)
+            if extracted_molecule != molecule:
+                st.info(f"🔍 Detected molecule: **{extracted_molecule}** (from query)")
+            if extracted_region != region:
+                st.info(f"🌍 Detected region: **{extracted_region}** (from query)")
+
+            # Show loading state
+            with st.spinner("🤖 Master Agent orchestrating worker agents..."):
+                # Call the workflow
+                uploaded_doc = st.session_state.get("uploaded_doc", None)
+                state = run_demo_workflow(
+                    user_query=prompt,
+                    molecule=extracted_molecule,
+                    region=extracted_region,
+                    time_horizon=time_horizon,
+                    uploaded_doc=uploaded_doc,
+                )
 
             response = state.final_summary or "No summary generated."
             st.session_state.last_report_path = state.report_path
             st.session_state.last_agent_results = {
                 k: v.summary for k, v in state.agent_results.items()
+            }
+            st.session_state.last_agent_full_results = {
+                k: v for k, v in state.agent_results.items()
             }
             st.session_state.messages.append(
                 {"role": "assistant", "content": response}
@@ -73,15 +153,57 @@ def main():
 
     with agent_col:
         st.subheader("Agent Activity")
-
-        if st.session_state.last_agent_results:
-            for key, summary in st.session_state.last_agent_results.items():
-                with st.expander(f"{key} agent", expanded=False):
-                    st.markdown(summary)
+        
+        # Show count of agents that ran
+        if st.session_state.last_agent_full_results:
+            agent_count = len(st.session_state.last_agent_full_results)
+            st.caption(f"**{agent_count} agent(s) executed**")
+            st.divider()
+            
+            # Agent status icons
+            agent_status = {
+                "iqvia": "📊",
+                "exim": "📦",
+                "patent": "📜",
+                "clinical_trials": "🔬",
+                "internal": "📄",
+                "web": "🌐",
+            }
+            
+            for key, result in st.session_state.last_agent_full_results.items():
+                agent_name = result.agent_name if hasattr(result, 'agent_name') else key.replace("_", " ").title()
+                icon = agent_status.get(key, "✅")
+                with st.expander(f"{icon} {agent_name}", expanded=False):
+                    st.markdown(f"**Summary:** {result.summary}")
+                    
+                    # Display charts
+                    if hasattr(result, 'charts') and result.charts:
+                        for chart in result.charts:
+                            st.markdown(f"**{chart.get('title', 'Chart')}**")
+                            chart_data = base64.b64decode(chart.get('data', ''))
+                            st.image(BytesIO(chart_data), use_container_width=True)
+                    
+                    # Display tables
+                    if hasattr(result, 'tables') and result.tables:
+                        for table in result.tables:
+                            if table.get('rows'):
+                                df = pd.DataFrame(table['rows'])
+                                st.markdown(f"**{table.get('name', 'Data')}**")
+                                st.dataframe(df, use_container_width=True, hide_index=True)
         else:
             st.markdown(
                 "- **No agents run yet**: ask a question in the chat to trigger the workflow."
             )
+            st.info("💡 **Tip**: Use queries like 'Find innovation opportunities' to run all agents")
+            
+            # Show example queries
+            with st.expander("📝 Example Queries", expanded=False):
+                st.markdown("""
+                - "Find innovation opportunities for tiotropium in India"
+                - "Show market trends and patent landscape"
+                - "Also check for biosimilar competition"
+                - "Where is the unmet need in oncology?"
+                """)
 
         if st.session_state.last_report_path:
             try:
