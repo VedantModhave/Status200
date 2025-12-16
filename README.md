@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## EY Techathon 6.0 – Pharma Agentic AI (PS1)
 
 **Complete Agentic AI solution** for accelerating pharma innovation opportunity identification. Built for **EY Techathon 6.0** (Pharma domain, PS1).
@@ -102,4 +103,6 @@ Ready for 3-4 minute demo showcasing:
 3. Strategic signals detection
 4. PDF report download
 
+=======
+>>>>>>> 5f1fdc0d2908752d77810544a5083458ba095ffc
 
