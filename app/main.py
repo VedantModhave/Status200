@@ -200,7 +200,7 @@ def main():
     # Sidebar for configuration / molecule selection
     with st.sidebar:
         st.header("Query Configuration")
-        molecule = st.text_input("Molecule", value="")
+        molecule = st.text_input("Molecule", value="Enter your molecule name")
         region = st.selectbox("Region", ["Select region", "Global", "US", "India", "EU"], index=0)
         time_horizon = st.selectbox(
             "Time Horizon", ["Select time horizon", "3 years", "5 years", "10 years"], index=0
