@@ -170,7 +170,7 @@ def get_gemini_reply(prompt: str) -> str:
         return resp.text or "Gemini returned an empty response."
     except Exception as exc:  # pragma: no cover - defensive
         return (
-            f"Please try again later"
+            f"Please try again later.\n\n"
             "You can still ask pharma strategy questions so I can use the internal multi-agent system."
         )
 
@@ -323,7 +323,7 @@ def main():
             
             for key, result in st.session_state.last_agent_full_results.items():
                 agent_name = result.agent_name if hasattr(result, 'agent_name') else key.replace("_", " ").title()
-                with st.expander(f"✅ {agent_name}", expanded=False):
+                with st.expander(f" {agent_name}", expanded=False):
                     st.markdown(f"**Summary:** {result.summary}")
                     
                     # Display charts
