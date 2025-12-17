@@ -218,7 +218,7 @@ def main():
             st.session_state.uploaded_doc = uploaded_file.read()
         
         st.markdown("### Demo Info")
-        st.write("Team: EY Techathon 6.0 – Pharma Domain")
+        st.write("Team: Status200")
 
     # Main chat area
     chat_col, agent_col = st.columns([2, 1])
@@ -247,7 +247,7 @@ def main():
                     {
                         "role": "assistant",
                         "content": (
-                            "Hi, I am your pharma innovation copilot.\n\n"
+                            "Hi, I am your pharma innovation assistant.\n\n"
                             "Try asking a strategic question such as:\n"
                             "- `Find innovation opportunities for tiotropium in India over 5 years`\n"
                             "- `Which respiratory diseases in India show low competition but high patient burden?`\n"
