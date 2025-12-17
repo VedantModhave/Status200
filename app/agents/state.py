@@ -26,6 +26,5 @@ class ConversationState(BaseModel):
     final_summary: Optional[str] = None
     report_path: Optional[str] = None
     uploaded_doc: Optional[bytes] = None  # PDF file content
-    clarification_needed: Optional[str] = None  # Clarification question if needed
 
 

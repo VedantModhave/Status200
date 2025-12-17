@@ -125,17 +125,15 @@ def main():
             if extracted_region != region:
                 st.info(f"🌍 Detected region: **{extracted_region}** (from query)")
 
-            # Show loading state
-            with st.spinner("🤖 Master Agent orchestrating worker agents..."):
-                # Call the workflow
-                uploaded_doc = st.session_state.get("uploaded_doc", None)
-                state = run_demo_workflow(
-                    user_query=prompt,
-                    molecule=extracted_molecule,
-                    region=extracted_region,
-                    time_horizon=time_horizon,
-                    uploaded_doc=uploaded_doc,
-                )
+            # Call the (temporary) demo workflow instead of a real LangGraph graph
+            uploaded_doc = st.session_state.get("uploaded_doc", None)
+            state = run_demo_workflow(
+                user_query=prompt,
+                molecule=extracted_molecule,
+                region=extracted_region,
+                time_horizon=time_horizon,
+                uploaded_doc=uploaded_doc,
+            )
 
             response = state.final_summary or "No summary generated."
             st.session_state.last_report_path = state.report_path
@@ -160,20 +158,9 @@ def main():
             st.caption(f"**{agent_count} agent(s) executed**")
             st.divider()
             
-            # Agent status icons
-            agent_status = {
-                "iqvia": "📊",
-                "exim": "📦",
-                "patent": "📜",
-                "clinical_trials": "🔬",
-                "internal": "📄",
-                "web": "🌐",
-            }
-            
             for key, result in st.session_state.last_agent_full_results.items():
                 agent_name = result.agent_name if hasattr(result, 'agent_name') else key.replace("_", " ").title()
-                icon = agent_status.get(key, "✅")
-                with st.expander(f"{icon} {agent_name}", expanded=False):
+                with st.expander(f"✅ {agent_name}", expanded=False):
                     st.markdown(f"**Summary:** {result.summary}")
                     
                     # Display charts
@@ -195,15 +182,6 @@ def main():
                 "- **No agents run yet**: ask a question in the chat to trigger the workflow."
             )
             st.info("💡 **Tip**: Use queries like 'Find innovation opportunities' to run all agents")
-            
-            # Show example queries
-            with st.expander("📝 Example Queries", expanded=False):
-                st.markdown("""
-                - "Find innovation opportunities for tiotropium in India"
-                - "Show market trends and patent landscape"
-                - "Also check for biosimilar competition"
-                - "Where is the unmet need in oncology?"
-                """)
 
         if st.session_state.last_report_path:
             try:

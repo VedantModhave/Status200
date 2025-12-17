@@ -23,7 +23,6 @@ class WorkflowState(TypedDict, total=False):
     final_summary: str
     report_path: str
     uploaded_doc: bytes
-    clarification_needed: str
 
 
 def _to_model(state: WorkflowState) -> ConversationState:
@@ -37,7 +36,6 @@ def _to_model(state: WorkflowState) -> ConversationState:
         final_summary=state.get("final_summary"),
         report_path=state.get("report_path"),
         uploaded_doc=state.get("uploaded_doc"),
-        clarification_needed=state.get("clarification_needed"),
     )
 
 
@@ -50,19 +48,11 @@ def _from_model(model: ConversationState, state: WorkflowState) -> WorkflowState
     state["agent_results"] = model.agent_results
     state["final_summary"] = model.final_summary or ""
     state["report_path"] = model.report_path
-    state["clarification_needed"] = model.clarification_needed
     return state
 
 
 def node_plan(state: WorkflowState) -> WorkflowState:
     cs = _to_model(state)
-    
-    # Check if clarification is needed
-    clarification = master.needs_clarification(cs)
-    if clarification:
-        cs.clarification_needed = clarification
-        return _from_model(cs, state)
-    
     cs = master.plan_tasks(cs)
     return _from_model(cs, state)
 
@@ -130,16 +120,8 @@ def build_graph():
     graph.add_node("report", node_report)
 
     graph.set_entry_point("plan")
-    
-    # Conditional routing: if clarification needed, skip to synthesis to return question
-    def route_after_plan(state: WorkflowState) -> str:
-        if state.get("clarification_needed"):
-            return "synthesis"  # Return clarification question
-        return "iqvia"
-    
-    graph.add_conditional_edges("plan", route_after_plan)
-    
     # Sequential flow - agents check internally if they should run
+    graph.add_edge("plan", "iqvia")
     graph.add_edge("iqvia", "exim")
     graph.add_edge("exim", "patent")
     graph.add_edge("patent", "clinical")
