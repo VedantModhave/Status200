@@ -25,9 +25,6 @@ def _clean_markdown(text: str) -> str:
 
     # Strip bold markers
     clean = text.replace("**", "")
-    # Replace emoji bullets with plain labels
-    clean = clean.replace("🔍 ", "")
-    clean = clean.replace("💡 ", "")
     # Normalise markdown list bullets to simple line breaks with dashes
     clean = clean.replace("\n- ", "<br/>- ")
     return clean

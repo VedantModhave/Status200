@@ -16,7 +16,6 @@ This repository contains a demo implementation of an Agentic AI system for a mul
 cd "C:\Users\modha\OneDrive\Desktop\EY Pharma"
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install --upgrade pip
 pip install -r requirements.txt
 ```
 

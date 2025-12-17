@@ -11,9 +11,9 @@ def plan_tasks(state: ConversationState) -> ConversationState:
     
     # Define agent keywords for intelligent routing
     agent_keywords = {
-        "iqvia": ["market", "sales", "growth", "cagr", "competition", "competitor", "revenue", "size", "trend"],
+        "iqvia": ["market", "sales", "growth", "cagr", "competition", "competitor", "revenue", "size", "trend", "whitespace"],
         "exim": ["import", "export", "trade", "exim", "supply", "sourcing", "api", "formulation", "volume"],
-        "patent": ["patent", "ip", "intellectual property", "expiry", "fto", "freedom to operate", "filing"],
+        "patent": ["patent", "ip", "intellectual property", "expiry", "fto", "freedom to operate", "filing", "biosimilar"],
         "clinical_trials": ["trial", "clinical", "pipeline", "phase", "study", "sponsor", "recruiting", "nct"],
         "internal": ["internal", "strategy", "field", "mins", "deck", "insight"],
         "web": ["guideline", "publication", "literature", "rwe", "real world", "evidence", "journal", "news"],
@@ -66,6 +66,18 @@ def synthesize_results(state: ConversationState) -> ConversationState:
         f"over **{state.time_horizon}**."
     )
 
+    # Light-weight clarification note for vague queries
+    if not state.molecule or state.molecule.lower() in ["", "molecule"]:
+        parts.append(
+            "\n> I could not detect a specific molecule in your question. "
+            "You can refine by saying, for example, 'for tiotropium in India' or 'by MoA instead of region'."
+        )
+    else:
+        parts.append(
+            "\n> If you prefer the analysis by MoA instead of region, or want to "
+            "also check for biosimilar competition, mention that explicitly in a follow-up question."
+        )
+
     # Derive some simple metrics from agent tables
     iqvia = state.agent_results.get("iqvia")
     trials = state.agent_results.get("clinical_trials")
@@ -114,9 +126,9 @@ def synthesize_results(state: ConversationState) -> ConversationState:
         parts.append("")
         parts.append("**Strategic Signals**")
         for w in whitespace_flags:
-            parts.append(f"- 🔍 Whitespace: {w}")
+            parts.append(f"- Whitespace: {w}")
         for o in opp_flags:
-            parts.append(f"- 💡 Opportunity: {o}")
+            parts.append(f"- Opportunity: {o}")
 
     parts.append("")
     parts.append("**Agent Findings**")
