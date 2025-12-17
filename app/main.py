@@ -8,7 +8,7 @@ import streamlit as st
 import re
 
 try:
-    import google.generativeai as genai  # type: ignore[import-not-found]
+    from google import genai  # type: ignore[import-not-found]
     GEMINI_AVAILABLE = True
 except Exception:
     genai = None
@@ -146,7 +146,7 @@ def is_project_query(query: str) -> bool:
 def get_gemini_reply(prompt: str) -> str:
     """
     Call Gemini for general / non-strategic queries.
-    Requires GEMINI_API_KEY in environment and google-generativeai installed.
+    Requires GEMINI_API_KEY in environment and google-genai installed.
     """
     if not GEMINI_AVAILABLE:
         return (
@@ -162,10 +162,11 @@ def get_gemini_reply(prompt: str) -> str:
         )
 
     try:
-        genai.configure(api_key=api_key)
-        # Use the requested Gemini model for project-related Q&A
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
-        resp = model.generate_content(prompt)
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         return resp.text or "Gemini returned an empty response."
     except Exception as exc:  # pragma: no cover - defensive
         return (
@@ -260,7 +261,9 @@ def main():
             # only if it is about this EY Techathon project; otherwise show a polite message.
             if not is_strategic_query(prompt):
                 if is_project_query(prompt):
-                    general_reply = get_gemini_reply(prompt)
+                    # Show loading while Gemini generates the answer
+                    with st.spinner("Thinking about your question..."):
+                        general_reply = get_gemini_reply(prompt)
                 else:
                     general_reply = (
                         "This demo is focused on the EY Techathon 6.0 Pharma Problem Statement 1.\n\n"
