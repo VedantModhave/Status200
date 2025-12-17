@@ -163,10 +163,9 @@ def get_gemini_reply(prompt: str) -> str:
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        resp = model.generate_content(
-            prompt,
-        )
+        # Use the requested Gemini model for project-related Q&A
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
+        resp = model.generate_content(prompt)
         return resp.text or "Gemini returned an empty response."
     except Exception as exc:  # pragma: no cover - defensive
         return (
