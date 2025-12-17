@@ -170,7 +170,7 @@ def get_gemini_reply(prompt: str) -> str:
         return resp.text or "Gemini returned an empty response."
     except Exception as exc:  # pragma: no cover - defensive
         return (
-            f"Gemini call failed: {exc}\n\n"
+            f"Please try again later"
             "You can still ask pharma strategy questions so I can use the internal multi-agent system."
         )
 
